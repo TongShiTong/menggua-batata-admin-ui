@@ -1,0 +1,719 @@
+<template>
+  <div class="basics-box">
+    <el-card class="box-card">
+      <div class="todo-box">
+        <div>
+          <!-- <div class="title-desc">利润默认分配比例</div> -->
+          <div class="draw">
+            <span>利润默认分配比例：</span>
+            <span
+              >商品佣金<input
+                type="text"
+                placeholder="0"
+                v-model="input1"
+                onkeypress="if(window.event.keyCode==13) this.blur()"
+                @blur="upInput1"
+              />%</span
+            >
+            <span
+              >区域分红<input
+                type="text"
+                placeholder="0"
+                v-model="input2"
+                onkeypress="if(window.event.keyCode==13) this.blur()"
+                @blur="upInput2"
+              />%</span
+            >
+            <span
+              >平台剩余<input
+                type="text"
+                placeholder="0"
+                v-model="input3"
+                onkeypress="if(window.event.keyCode==13) this.blur()"
+                @blur="upInput3"
+              />%</span
+            >
+          </div>
+          <div class="notes">注：区域分红无归属对象时，归平台所有。</div>
+        </div>
+        <!-- <div class="add-btn">
+          <el-button type="primary" v-if="isDisabled" @click="bindEdit">编辑</el-button>
+          <el-button type="primary" v-else @click="bindSave">保存</el-button>
+        </div> -->
+      </div>
+    </el-card>
+
+    <el-card class="box-card">
+      <div class="fenhong-info">
+        <div class="home-box">
+            <div class="title-item">平台补贴配置</div>
+            <div style="font-size:16px;color:#595959;">单独配置补贴商品以单独设置比例结算</div>
+            <div class="pt-bt">
+                <div>全平台补贴</div>
+                <div><input type="text" placeholder="0" onkeypress="if(window.event.keyCode==13) this.blur()" @blur="upInput4" v-model="input4">%</div>
+            </div>
+            <div class="data-box">
+                <div class="pt-bt1">
+                    <div style="font-size:16px;color:#262626;font-weight: bold;">商品ID与名称</div>
+                    <div class="add-btn" style="display:flex;">
+                      <el-upload
+                        ref="upload"
+                        :action="base_url+'/itemSubsidy/excelImportItemSubsidy'"
+                        :headers="headerObj"
+                        accept=".xlsx"
+                        :limit="limit"
+                        :before-upload="beforeUpload"
+                        :on-change="handleChange"
+                        :on-remove="handleRemove"
+                        :on-exceed="handleExceed"
+                        :on-success="handleSuccess"
+                        :on-error="handleError"
+                        style="margin-right:16px;position:relative;">
+                        <el-button size="mini" round>添加</el-button>
+                      </el-upload>
+                      
+                      <!-- <el-button type="danger" size="mini" round @click="handleRemove">删除</el-button> -->
+                    </div>
+                </div>
+                <div class="data">
+                    <div class="data_info" v-for="(item,index) in goodList" :key="index">
+                        <div>{{item.itemId}}</div>
+                        <div class="good_title">{{item.itemName}}</div>
+                        <div><input type="text" v-model="item.subsidyRatio" disabled>%</div>
+                    </div> 
+                </div>
+                
+            </div>
+          <!-- <div class="save-btn">
+            <el-button type="primary" size="small" round>发布</el-button>
+          </div> -->
+        </div>
+
+        <div class="right-box">
+            <div class="title-item">区域分红实配比例</div>
+            <div class="info-cont">
+              <div class="table_title">
+                <div class="qu-name">区域名称</div>
+                <div class="center-box">实配比例</div>
+                <div class="center-box">实得比例</div>
+                <div class="center-box">区域补贴</div>
+                <div class="center-box">实补比例</div>
+                <div class="center-box" style="min-width:200px">区域归属</div>
+                <div class="gs-time" style="min-width:350px">归属时间</div>
+              </div>
+              <div class="zs-line"></div>
+              <div class="data-box1">
+                  <div v-for="(item, index) in dataList" :key="index">
+                    <div class="province-box" v-bind:title="item.shengList" @click="bindProv(index)">{{item.shengList}}</div>
+                    <div ref="element" :class="[provIndex===index ? 'active':'disActive']">
+                      <div v-for="(item1, index1) in item.city" :key="index1">
+                        <div class="province-box" style="margin-left: 50px;" v-bind:title="item1.shiList" @click="bindCity(index,index1,item1.id)">{{item1.shiList}}</div>
+
+                        <div v-if="provIndex===index&&cityIndex1===index1">
+                          <div v-for="(item2, index2) in areaList" :key="index2" class="area-box"  @click="bindArea(index2)">
+                            <div class="area" v-bind:title="item2.name">{{item2.name}}</div>
+                            <div class="input-box">
+                              <input type="text" placeholder="0" onkeypress="if(window.event.keyCode==13) this.blur()" @blur="actualScale" v-model="item2.actualScale" />%
+                            </div>
+                            <div class="input-box">
+                              <input type="text" placeholder="0" v-model="item2.getScale" disabled/>%
+                            </div>
+                            <div class="input-box">
+                              <input type="text" placeholder="0" onkeypress="if(window.event.keyCode==13) this.blur()" @blur="regionScale" v-model="item2.regionScale" />%
+                            </div>
+                            <div class="input-box">
+                              <input type="text" placeholder="0" v-model="item2.supplementScale" disabled/>%
+                            </div>
+                            <div class="gs-times" style="width:200px">
+                              <input type="text" placeholder="姓名" onkeypress="if(window.event.keyCode==13) this.blur()" @blur="regionName" v-model="item2.regionName" style="width:40%;text-align:right;background:none;">
+                              <input type="text" placeholder="帐号" onkeypress="if(window.event.keyCode==13) this.blur()" @blur="regionNum" v-model="item2.regionNum" style="width:40%;text-align:left;background:none;">
+                            </div>
+                            <div class="gs-times" style="min-width:350px">
+                              <el-date-picker
+                                v-model="item2.allTime"
+                                type="daterange"
+                                range-separator="至"
+                                start-placeholder="开始日期"
+                                end-placeholder="结束日期"
+                                value-format="yyyy-MM-dd"
+                                @change="changeTime">
+                              </el-date-picker>
+                            </div>
+                          </div>
+                        </div>  
+                      </div>
+                    </div>
+                  </div>
+                  
+              </div>
+            </div>
+            
+        </div>
+      </div>
+    
+    </el-card>
+  </div>
+</template>
+
+<script>
+import { isvalidPhone } from "../utils/validate.js";
+export default {
+  //当前组件的私有数据value
+  data() {
+    return {
+      base_url:this.base_url,
+      headerObj: {
+        Authorization:'Bearer ' + window.sessionStorage.getItem('token')
+      },
+      limit: 1,//上传最大的文件数
+      fileList:[],//excel文件列表
+      goodList:[],//获取excel文件商品列表
+      provIndex: 0,
+      cityIndex: 0,
+      cityIndex1: '',
+      input1: 0,
+      input2: 0,
+      input3: 0,
+      input4: 0,
+      dataList:[],//省市列表
+      areaList:[],//区域列表
+      areaIndex: null
+    };
+  },
+
+  //Vue生命周期函数
+  created() {
+    this.subsidyInfo()
+    this.allGoodInfo()
+    this.getProvCity()
+  },
+
+  //事件处理函数
+  methods: {
+    changeTime(e) {
+      let data = this.areaList[this.areaIndex]
+      data.endTime = e[1]
+      data.startTime = e[0]
+      this.areaInfo(data)
+    },
+      upInput1() {
+        if(this.input1==='') {
+          this.input1 = 0
+        }
+        let fieldName = "itemCommission"
+        this.modifyInfo(fieldName,this.input1)
+      },
+      upInput2() {
+        if(this.input2==='') {
+          this.input2 = 0
+        }
+        let fieldName = "regionalDividend"
+        this.modifyInfo(fieldName,this.input2)
+        console.log(this.dataList[this.provIndex].city[this.cityIndex].id)
+        this.getArea( this.dataList[this.provIndex].city[this.cityIndex].id)
+      },
+      upInput3() {
+        if(this.input3==='') {
+          this.input3 = 0
+        }
+        let fieldName = "platformSurplus"
+        this.modifyInfo(fieldName,this.input3)
+      },
+      upInput4() {
+        if(this.input4==='') {
+          this.input4 = 0
+        }
+        let fieldName = "platformSubsidy"
+        this.modifyInfo(fieldName,this.input4)
+      },
+
+      actualScale() {
+       let data = this.areaList[this.areaIndex]
+
+       if(data.actualScale==='') {
+         data.actualScale = 0
+       }
+
+       let getScale = Number(this.input2 * data.actualScale/100)
+       let supplementScale = Number( Math.floor(this.input2 * data.actualScale * data.regionScale/100) / 100)
+       data.getScale = getScale
+       data.supplementScale = supplementScale
+       this.areaInfo(data)
+      },
+
+      regionScale() {
+        let data = this.areaList[this.areaIndex]
+        if(data.regionScale==='') {
+         data.regionScale = 0
+        }
+        let getScale = Number(this.input2 * data.actualScale/100)
+        let supplementScale = Number( Math.floor(this.input2 * data.actualScale * data.regionScale/100) / 100)
+        data.getScale = getScale
+        data.supplementScale = supplementScale
+        this.areaInfo(data)
+      },
+
+      regionName() {
+        let data = this.areaList[this.areaIndex]
+        if(data.regionName==='') {
+         data.regionName = null
+       }
+        console.log(11122,data)
+        this.areaInfo(data)
+      },
+
+      regionNum() {
+        let data = this.areaList[this.areaIndex]
+        if(data.regionNum==='') {
+         data.regionNum = null
+       }
+        console.log(11122,data)
+        this.areaInfo(data)
+      },
+
+      // 获取省市
+      async getProvCity() {
+        const { data: res } = await this.$http.post("/district/obtainDistrict",{});
+        if(res.code=="801") {
+          this.dataList=res.result
+          this.getArea(res.result[0].city[0].id)
+        }else {
+          this.$message.error('获取信息失败')
+        }
+      },
+
+      // 获取区级数据
+      async getArea(id) {
+        let self = this
+        const { data: res } = await this.$http.get("/district/getDistrictByUpid", { params: {id} });
+        if(res.code=="801") {
+          // this.$message.success('修改信息成功')
+          for(let i=0; i<res.result.length; i++) {
+            if(res.result[i].startTime && res.result[i].endTime) {
+              let allTime = []
+              allTime.push(res.result[i].startTime)
+              allTime.push(res.result[i].endTime)
+              res.result[i].allTime = allTime
+            }else {
+              res.result[i].allTime = ''
+            }
+            
+          }
+          this.areaList = res.result
+          this.cityIndex1 = this.cityIndex
+          console.log(this.areaList)
+        }else {
+          this.$message.error('获取信息失败')
+        }
+      },
+
+      // 查询商品默认利润分配信息（商品佣金、区域分红、平台剩余、平台补贴）
+      async subsidyInfo() {
+        const { data: res } = await this.$http.get("/itemSubsidy/selectSpecialFields",{});
+        if(res.code=="801") {
+          // this.goodList=res.result
+          this.input1 = res.result[0].value
+          this.input2 = res.result[1].value
+          this.input3 = res.result[2].value
+          this.input4 = res.result[3].value
+
+        }else {
+          this.$message.error('获取信息失败')
+        }
+      },
+      // 查询平台所有补贴商品信息接口
+      async allGoodInfo() {
+        const { data: res } = await this.$http.get("/itemSubsidy/selectAllItemSubsidy",{});
+        if(res.code=="801") {
+          this.goodList=res.result
+        }else {
+          this.$message.error('获取信息失败')
+        }
+      },
+      // 批量更新商品默认利润字段的值接口
+      async modifyInfo(name,id) {
+        const { data: res } = await this.$http.post("/itemSubsidy/updateSpecialFieldsValue", { fieldName:name,value:id });
+        if(res.code=="801") {
+          this.$message.success('修改信息成功')
+          
+        }else {
+          this.$message.error('修改信息失败')
+        }
+      },
+
+       // 批量更新区域分红数据接口
+      async areaInfo(data) {
+        const { data: res } = await this.$http.post("/district/editDistrict", data);
+        if(res.code=="801") {
+          this.$message.success('修改信息成功')
+        }else {
+          this.$message.error('修改信息失败')
+        }
+      },
+
+     // 上传文件之前的钩子, 参数为上传的文件,若返回 false 或者返回 Promise 且被 reject，则停止上传
+      beforeUpload(file) {
+        console.log(1,file)
+        let extension = file.name.substring(file.name.lastIndexOf('.')+1)
+        let size = file.size / 1024 / 1024
+        if(extension !== 'xlsx') {
+          this.$message.warning('只能上传后缀是.xlsx的文件')
+        }
+        if(size > 10) {
+          this.$message.warning('文件大小不得超过10M')
+        }
+      },
+      // 文件状态改变
+      handleChange(file, fileList) {
+        if (file) {
+          this.fileList = fileList.slice(-3)
+        }
+      },
+
+      // 删除文件
+      handleRemove(file, fileList) {
+        this.fileList = []
+      },
+
+      // 文件超出个数限制
+      handleExceed(files, fileList) {
+        this.$message.warning(`只能选择 ${this.limit} 个文件，当前共选择了 ${files.length + fileList.length} 个`)
+      },
+
+      // 文件上传成功
+      handleSuccess(res, file, fileList) {
+        this.$message.success('文件上传成功')
+        this.$refs.upload.clearFiles()
+        this.allGoodInfo()
+      },
+
+      // 文件上传失败
+      handleError(err, file, fileList) {
+        this.$message.error('文件上传失败')
+      },
+    // // 编辑
+    // bindEdit() {
+    //   this.isDisabled = false
+    // },
+    // // 保存
+    // bindSave() {
+    //   this.isDisabled = true
+    // },
+    // 点击省
+    bindProv(index) {
+      if(this.provIndex === index) {
+        this.provIndex = ''
+        this.cityIndex = ''
+        this.cityIndex1 = ''
+        return
+      }
+      this.provIndex = index
+      this.cityIndex = ''
+      this.cityIndex1 = ''
+      this.areaList = []
+      // this.getArea(this.dataList[index].city[0].id)
+    },
+    // 点击市
+    bindCity(index,index1,id) {
+      this.provIndex = index
+      if(this.cityIndex === index1) {
+        console.log(this.cityIndex)
+        this.cityIndex = ''
+        this.cityIndex1 = ''
+        return
+      }
+      this.cityIndex = index1
+      this.getArea(id)
+    },
+    
+    // 修改表里数据
+    bindArea(index2) {
+      this.areaIndex = index2
+      console.log(index2)
+    }
+  },
+};
+</script>
+<style scoped>
+.basics-box {
+  padding: 20px;
+}
+.box-card {
+    margin-bottom: 10px;
+}
+.todo-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-left: 40px;
+}
+.todo-box .el-button--primary{
+  background: #FF5704;
+  border: none;
+  outline: none;
+}
+.title-desc {
+  font-size: 14px;
+  font-weight: bold;
+}
+.notes {
+  font-size: 11px;
+  color: #8C8C8C;
+}
+.draw {
+  padding: 10px 0 6px;
+  font-size: 16px;
+  color: #595959;
+  font-weight: bold;
+}
+.draw input {
+  border: none;
+  outline: none; 
+  background: rgba(255, 87, 4, 0.1);
+  width: 40px;
+  text-align: center;
+  padding: 4px;
+  margin: 0 5px;
+  border-radius: 3px;
+}
+.fenhong-info {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+.home-box {
+  width: 375px;
+  min-height: 82vh;
+  background: #fff;
+  padding: 20px 10px;
+  border-radius: 8px;
+  position: relative;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+.right-box {
+    min-width: 1000px;
+    min-height: 82vh;
+    background: #fff;
+    padding: 22px 14px 27px;
+    border-radius: 8px;
+    overflow: auto;
+ 
+}
+.info-cont {
+  background: #FAFAFA;
+  border-radius: 11px;
+  margin-top: 30px;
+  min-height: 70vh;
+  overflow: auto;
+  
+}
+.table_title {
+    display: flex;
+    height: 50px;
+    line-height: 50px;
+    font-size: 17px;
+    font-weight: bold;
+    color: #595959;
+    padding-left: 25px;
+    box-sizing: border-box;
+     
+}
+.zs-line {
+  background: #f5f5f5;
+  height: 14px;
+  width: 100%;
+}
+.center-box {
+  min-width: 114px;
+  text-align: center;
+}
+
+.qu-name {
+  min-width: 200px;
+}
+.gs-time {
+  width: 200px;
+  text-align: center;
+}
+/* .save-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+} */
+.title-item {
+    font-size: 27px;
+    font-weight: bold;
+    color: #262626;
+}
+.title-item span {
+    font-size: 12px;
+    font-weight: 400;
+    margin-left: 10px;
+}
+.pt-bt1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 30px;
+    /* background: #eee; */
+    padding: 0 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+    margin-bottom: 20px;
+
+}
+.pt-bt {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 66px;
+    background: #FF5704;
+    padding: 0 10px;
+    border-radius: 11px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #ffffff;
+    font-weight: bold;
+}
+.pt-bt input {
+    border: none;
+    outline: none;
+    background: #FF5704;
+    width: 40px;
+    text-align: center;
+    padding: 4px;
+    margin: 0 5px;
+    border-radius: 6px;
+    color: #ffffff;
+}
+/deep/ .el-upload-list {
+  position: absolute;
+  top: 20px;
+  right: 0;
+}
+.data-box {
+    /* background: #eee; */
+    border-radius: 8px;
+    height: 70vh;
+    padding: 10px 0;
+}
+.data-box1 {
+  max-height: 70vh;
+
+}
+
+.data {
+    height: 60vh;
+    overflow: auto;
+    padding: 0 10px;
+}
+.data_info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #595959;
+}
+.data input {
+    border: none;
+    outline: none;
+    background: #FFEEE5;
+    width: 32px;
+    text-align: center;
+    padding: 4px;
+    margin: 0 5px;
+    border-radius: 3px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #262626;
+}
+.good_title {
+    width: 200px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    margin-left: 6px;
+}
+.el-card{
+  background: #f9f9f9;
+}
+.province-box {
+  width: 114px;
+  height: 48px;
+  text-align: center;
+  line-height: 48px;
+  font-size: 16px;
+  color: #595959;
+  font-weight: bold;
+  cursor: pointer;
+  overflow: hidden;/*超出部分隐藏*/
+  white-space: nowrap;/*不换行*/
+  text-overflow:ellipsis;/*超出部分文字以...显示*/
+
+}
+.area-box {
+  display:flex;
+  margin-left: 114px;
+  align-items: center;
+  font-size: 16px;
+  color: #8C8C8C;
+  font-weight: bold;
+}
+.input-box {
+  min-width: 114px;
+  height: 48px;
+  text-align: center;
+  line-height: 48px;
+  
+}
+.area {
+  min-width: 114px;
+  height: 48px;
+  text-align: center;
+  line-height: 48px;
+  overflow: hidden;/*超出部分隐藏*/
+  white-space: nowrap;/*不换行*/
+  text-overflow:ellipsis;/*超出部分文字以...显示*/
+}
+.area-box input {
+  border: none;
+  outline: none;
+  background: #FFEEE5;
+  width: 36px;
+  height: 32px;
+  text-align: center;
+  line-height: 32px;
+  margin-right: 3px;
+  border-radius: 3px;
+}
+.gs-times {
+  min-width: 200px;
+  height: 48px;
+  text-align: center;
+  line-height: 48px;
+  font-size: 16px;
+  color: #595959;
+  font-weight: bold;
+}
+.active {
+  max-height: 100%;
+  transition: max-height 0.5s;
+}
+.disActive {
+  max-height: 0;
+  transition: max-height 0.5s;
+  overflow: hidden;
+}
+.active1 {
+  max-height: 300vh;
+  transition: max-height 0.5s;
+}
+.disActive1 {
+  max-height: 0;
+  transition: max-height 0.5s;
+  overflow: hidden;
+}
+</style>
